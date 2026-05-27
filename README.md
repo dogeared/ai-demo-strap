@@ -62,7 +62,7 @@ cd ai-demo-strap
 Or one-shot from a URL:
 
 ```bash
-curl -fsSL <raw-url>/bootstrap.sh -o bootstrap.sh && bash bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/dogeared/ai-demo-strap/refs/heads/main/bootstrap.sh -o bootstrap.sh && bash bootstrap.sh
 ```
 
 What happens, in order:
