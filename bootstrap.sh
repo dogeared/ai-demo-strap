@@ -74,6 +74,7 @@ CASKS=(
   # AI desktop assistants (official vendor apps)
   claude                # Anthropic Claude desktop
   chatgpt               # OpenAI ChatGPT desktop
+  codex-app             # OpenAI Codex desktop (manages coding agents)
   google-gemini         # Google Gemini desktop
   # Local-model AI desktops
   ollama-app            # Ollama desktop UI
@@ -86,12 +87,13 @@ CASKS=(
   iterm2                # classic terminal
   ghostty               # modern GPU terminal
   google-chrome         # for OAuth flows + general demo use
+  # CLI binaries distributed as casks (not GUI apps — go on PATH)
+  codex                 # OpenAI Codex CLI (brew binary distribution)
 )
 
 # Only tools without a brew package. Kept tiny on purpose.
 NPM_PACKAGES=(
   "@anthropic-ai/claude-code"
-  "@openai/codex"
 )
 
 # ---------- arg parsing ----------
@@ -288,9 +290,51 @@ step "Homebrew"
 if command -v brew >/dev/null 2>&1; then
   ok "Already installed ($(brew --version | head -n1))"
 else
-  log "Installing Homebrew..."
-  NONINTERACTIVE=1 /bin/bash -c \
-    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  # Sanity-check HTTPS first. On fresh macOS VMs the system clock is often
+  # months in the past, which makes recent TLS certs look "not yet valid"
+  # and curl reports it as "unable to get local issuer certificate".
+  BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+  log "Verifying HTTPS connectivity to github.com..."
+  if ! curl_err="$(curl -fsSL --max-time 15 -o /dev/null "$BREW_INSTALL_URL" 2>&1)"; then
+    err "HTTPS check failed."
+    printf "  %scurl: %s%s\n" "$DIM" "$curl_err" "$RESET"
+    printf "  %ssystem date: %s%s\n" "$DIM" "$(date)" "$RESET"
+    if printf '%s' "$curl_err" | grep -qiE 'ssl|certificate|tls'; then
+      printf "\n%sLooks like a TLS/cert error.%s On a fresh macOS install\n" "$YELLOW$BOLD" "$RESET"
+      printf "(especially in a UTM/QEMU VM) this almost always means the\n"
+      printf "system clock is wrong — recent TLS certs appear 'not yet valid'.\n\n"
+      printf "Fix the clock, then re-run this script:\n"
+      printf "  %ssudo sntp -sS time.apple.com%s\n\n" "$BOLD" "$RESET"
+      printf "Or: %sSystem Settings → General → Date & Time%s → toggle 'Set automatically'.\n" "$BOLD" "$RESET"
+    else
+      printf "\nCheck network, DNS, and proxy settings, then re-run.\n"
+    fi
+    exit 1
+  fi
+  ok "HTTPS connectivity OK"
+
+  # Download installer to a file so curl errors are actually caught — a
+  # 'bash -c "$(curl ...)"' silently runs an empty script if curl fails.
+  installer="$(mktemp -t brew-install)"
+  trap 'rm -f "$installer"' EXIT
+  log "Downloading Homebrew installer..."
+  if ! curl -fsSL "$BREW_INSTALL_URL" -o "$installer" || [[ ! -s "$installer" ]]; then
+    err "Failed to download Homebrew installer."
+    exit 1
+  fi
+
+  log "Running Homebrew installer..."
+  if ! NONINTERACTIVE=1 /bin/bash "$installer"; then
+    err "Homebrew installer exited non-zero. Re-run after fixing the issue above."
+    exit 1
+  fi
+
+  if [[ ! -x "$BREW_PREFIX/bin/brew" ]]; then
+    err "Installer finished but $BREW_PREFIX/bin/brew is missing."
+    err "Something went wrong silently — check the installer output above."
+    exit 1
+  fi
+
   # Make brew available in this shell for the rest of the script.
   eval "$("$BREW_PREFIX/bin/brew" shellenv)"
   # And persist for future shells (zsh is macOS default).
@@ -302,8 +346,18 @@ else
   ok "Homebrew installed."
 fi
 
+if ! command -v brew >/dev/null 2>&1; then
+  err "brew is not on PATH after install. Aborting."
+  err "Try opening a new terminal and running the script again."
+  exit 1
+fi
+
 log "Updating Homebrew..."
-brew update >/dev/null
+if ! brew update >/dev/null; then
+  err "brew update failed. Common cause: system clock skew or no network."
+  err "Try: sudo sntp -sS time.apple.com  then re-run."
+  exit 1
+fi
 ok "Homebrew up to date."
 
 # ---------- brew packages ----------
@@ -336,6 +390,7 @@ for cask in "${CASKS[@]}"; do
     zed)                app_name="Zed.app" ;;
     claude)             app_name="Claude.app" ;;
     chatgpt)            app_name="ChatGPT.app" ;;
+    codex-app)          app_name="Codex.app" ;;
     google-gemini)      app_name="Gemini.app" ;;
     ollama-app)         app_name="Ollama.app" ;;
     lm-studio)          app_name="LM Studio.app" ;;
@@ -383,10 +438,9 @@ else
     ok "Added $NPM_PREFIX/bin to PATH in $ZPROFILE"
   fi
 
-  # name:cmd:package triples — only tools without a brew formula live here.
+  # name:cmd:package triples — only tools without a brew package live here.
   NPM_TOOLS=(
     "Claude Code:claude:@anthropic-ai/claude-code"
-    "OpenAI Codex CLI:codex:@openai/codex"
   )
   for entry in "${NPM_TOOLS[@]}"; do
     name="${entry%%:*}"; rest="${entry#*:}"
@@ -417,7 +471,7 @@ for cmd in brew git node npm python3 gh jq rg \
 done
 printf "\n%sGUI apps in /Applications:%s\n" "$BOLD" "$RESET"
 for app in "Cursor.app" "Windsurf.app" "Visual Studio Code.app" "Zed.app" \
-           "Claude.app" "ChatGPT.app" "Gemini.app" \
+           "Claude.app" "ChatGPT.app" "Codex.app" "Gemini.app" \
            "Ollama.app" "LM Studio.app" "Msty.app" "Jan.app" "Cherry Studio.app" \
            "Warp.app" "iTerm.app" "Ghostty.app" "Google Chrome.app"; do
   if [[ -d "/Applications/$app" ]]; then
@@ -451,6 +505,7 @@ AUTH_TOOLS=(
   # Vendor desktop assistants.
   "Claude (desktop)|Opens Claude. Sign in with your Anthropic account, then return here.|open -a Claude"
   "ChatGPT (desktop)|Opens ChatGPT. Sign in with your OpenAI account, then return here.|open -a ChatGPT"
+  "Codex (desktop)|Opens Codex. Sign in with your OpenAI account, then return here.|open -a Codex"
   "Google Gemini (desktop)|Opens Gemini. Sign in with your Google account, then return here.|open -a Gemini"
 )
 
