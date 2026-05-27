@@ -229,9 +229,26 @@ do_uninstall() {
   # Homebrew itself — strictly opt-in.
   if command -v brew >/dev/null 2>&1; then
     if ask_yn "Uninstall Homebrew itself? (destructive, removes /opt/homebrew or /usr/local/Homebrew)" "n"; then
-      log "Running official Homebrew uninstaller..."
-      NONINTERACTIVE=1 /bin/bash -c \
-        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
+      uninstaller="$(mktemp -t brew-uninstall)"
+      trap 'rm -f "$uninstaller"' EXIT
+      log "Downloading Homebrew uninstaller..."
+      if ! curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh \
+            -o "$uninstaller" || [[ ! -s "$uninstaller" ]]; then
+        err "Failed to download Homebrew uninstaller. Skipping."
+      else
+        printf "\n%sHomebrew uninstall needs sudo.%s Enter your password if prompted:\n" \
+          "$BOLD$YELLOW" "$RESET"
+        if ! sudo -v; then
+          err "sudo authentication failed. Skipping Homebrew uninstall."
+        else
+          ( while true; do sudo -n true 2>/dev/null || exit; sleep 60; done ) &
+          un_keepalive=$!
+          log "Running official Homebrew uninstaller..."
+          NONINTERACTIVE=1 /bin/bash "$uninstaller" || \
+            warn "Uninstaller exited non-zero."
+          kill "$un_keepalive" 2>/dev/null || true
+        fi
+      fi
     fi
   fi
 
@@ -323,11 +340,30 @@ else
     exit 1
   fi
 
-  log "Running Homebrew installer..."
-  if ! NONINTERACTIVE=1 /bin/bash "$installer"; then
-    err "Homebrew installer exited non-zero. Re-run after fixing the issue above."
+  # Pre-authenticate sudo. NONINTERACTIVE=1 makes brew use `sudo -n`, which
+  # requires either passwordless sudo OR a cached sudo credential. macOS
+  # admins are NOT passwordless by default — so we prompt once here and
+  # cache. (Without this, an admin user still gets "Need sudo access".)
+  printf "\n%sHomebrew needs sudo for initial setup.%s Enter your password if prompted:\n" \
+    "$BOLD$YELLOW" "$RESET"
+  if ! sudo -v; then
+    err "sudo authentication failed. Is your user an admin? Aborting."
     exit 1
   fi
+  # Keep the sudo timestamp fresh while the installer runs (it can take
+  # several minutes, longer than the default 5-min timeout).
+  ( while true; do sudo -n true 2>/dev/null || exit; sleep 60; done ) &
+  sudo_keepalive=$!
+  trap 'kill "$sudo_keepalive" 2>/dev/null; rm -f "$installer"' EXIT
+
+  log "Running Homebrew installer..."
+  if ! NONINTERACTIVE=1 /bin/bash "$installer"; then
+    kill "$sudo_keepalive" 2>/dev/null || true
+    err "Homebrew installer exited non-zero."
+    err "If it complained about sudo, re-run the script."
+    exit 1
+  fi
+  kill "$sudo_keepalive" 2>/dev/null || true
 
   if [[ ! -x "$BREW_PREFIX/bin/brew" ]]; then
     err "Installer finished but $BREW_PREFIX/bin/brew is missing."
