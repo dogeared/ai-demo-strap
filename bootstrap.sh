@@ -46,6 +46,29 @@ ask_yn() {
   done
 }
 
+# Open $1 (a shell command) in a fresh window of the user's preferred
+# terminal. Prefers iTerm2 if installed, falls back to Terminal.app.
+# Echoes the terminal app label to stdout. Returns osascript's exit code.
+# NOTE: $1 must not contain unescaped double quotes or backslashes.
+open_in_new_terminal() {
+  local cmd="$1"
+  if [[ -d "/Applications/iTerm.app" ]]; then
+    printf "iTerm"
+    osascript >/dev/null 2>&1 <<APPLESCRIPT
+tell application "iTerm"
+  activate
+  set newWindow to (create window with default profile)
+  tell current session of newWindow
+    write text "$cmd"
+  end tell
+end tell
+APPLESCRIPT
+  else
+    printf "Terminal.app"
+    osascript -e "tell application \"Terminal\" to do script \"$cmd\"" >/dev/null 2>&1
+  fi
+}
+
 # ---------- shared tool lists (used by both install and uninstall) ----------
 # Everything that can come from Homebrew, does. Only Claude Code and OpenAI
 # Codex have no brew formula as of this writing — those stay on npm.
@@ -593,13 +616,13 @@ for entry in "${AUTH_TOOLS[@]}"; do
       read -r _ </dev/tty || true
       ;;
     newtab)
-      # Open in a fresh Terminal.app window. This works around TUI/UTM
-      # issues where Claude Code / Codex CLI hang or panic inside iTerm2.
-      if osascript -e "tell application \"Terminal\" to do script \"$actual_cmd\"" >/dev/null 2>&1; then
-        printf "  %sNew Terminal.app window opened — complete sign-in there, then close it.%s\n" \
-          "$DIM" "$RESET"
+      # Open in a fresh terminal window — iTerm2 if installed, else Terminal.app.
+      # Helper prints the chosen app's label and returns osascript's exit code.
+      if term_label="$(open_in_new_terminal "$actual_cmd")"; then
+        printf "  %sNew %s window opened — complete sign-in there, then close it.%s\n" \
+          "$DIM" "$term_label" "$RESET"
       else
-        warn "Couldn't open a new Terminal.app window. Run this manually:"
+        warn "Couldn't open a new $term_label window. Run this manually:"
         printf "    %s%s%s\n" "$BOLD" "$actual_cmd" "$RESET"
       fi
       printf "  %sPress Enter once you've finished signing in to %s (or to skip)...%s " \

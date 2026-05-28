@@ -113,8 +113,8 @@ After install, the script offers to walk you through signing in to:
 |------|--------------|
 | GitHub CLI | `gh auth login --web` — runs inline, browser flow |
 | Gemini CLI | runs `gemini` inline; follow OAuth prompt |
-| Claude Code | **opens a new Terminal.app window** running `claude` — pick theme, `/login`, then close that window |
-| OpenAI Codex CLI | **opens a new Terminal.app window** running `codex` — `/login`, then close that window |
+| Claude Code | **opens a new terminal window** running `claude` — pick theme, `/login`, then close that window |
+| OpenAI Codex CLI | **opens a new terminal window** running `codex` — `/login`, then close that window |
 | Cursor | opens app; sign in via Settings → Account |
 | Windsurf | opens app; sign in on welcome screen |
 | Claude (desktop) | opens app; Anthropic account |
@@ -130,12 +130,15 @@ window, just close it and press Enter in the script to move on.
 ### Why Claude Code and Codex CLI open in a new window
 
 These two CLIs run full-screen TUIs (theme picker, slash commands, etc.)
-and have shown the most issues inside iTerm2 under UTM — Claude Code can
-hang on theme selection, and the Codex CLI binary has been observed to
-panic on first launch. Terminal.app under UTM handles TUI redraws more
-reliably than iTerm2. Running them in a fresh Terminal.app window also
-means a hang in those tools doesn't block the rest of the auth phase —
-you can close the window and continue.
+that can take over the current terminal. Spawning them in a separate
+window means a hang or crash in those tools doesn't block the rest of
+the auth phase — you can close that window and continue.
+
+**Which terminal opens?** The script prefers **iTerm2** if installed
+(which it is, since iTerm2 is in the cask list) and falls back to
+**Terminal.app** otherwise. If you've seen Claude Code hang or Codex
+panic inside iTerm2 under UTM, the most reliable workaround is to run
+the command manually in Terminal.app — see "Manual auth" below.
 
 ### Manual auth (if the scripted flow fails)
 
