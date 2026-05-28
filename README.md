@@ -111,10 +111,10 @@ After install, the script offers to walk you through signing in to:
 
 | Tool | How it's done |
 |------|--------------|
-| GitHub CLI | `gh auth login --web` — browser flow |
-| Claude Code | launches `claude`; run `/login` |
-| Gemini CLI | launches `gemini`; follow OAuth prompt |
-| OpenAI Codex CLI | launches `codex`; run `/login` |
+| GitHub CLI | `gh auth login --web` — runs inline, browser flow |
+| Gemini CLI | runs `gemini` inline; follow OAuth prompt |
+| Claude Code | **opens a new Terminal.app window** running `claude` — pick theme, `/login`, then close that window |
+| OpenAI Codex CLI | **opens a new Terminal.app window** running `codex` — `/login`, then close that window |
 | Cursor | opens app; sign in via Settings → Account |
 | Windsurf | opens app; sign in on welcome screen |
 | Claude (desktop) | opens app; Anthropic account |
@@ -122,7 +122,44 @@ After install, the script offers to walk you through signing in to:
 | Codex (desktop) | opens app; OpenAI account |
 | Google Gemini (desktop) | opens app; Google account |
 
-Each is y/n — skip the ones you don't need.
+Each is y/n — skip the ones you don't need. For the two "new Terminal window"
+tools, the script waits for you to press Enter after you've finished —
+analogous to the desktop apps. If something hangs or crashes in that
+window, just close it and press Enter in the script to move on.
+
+### Why Claude Code and Codex CLI open in a new window
+
+These two CLIs run full-screen TUIs (theme picker, slash commands, etc.)
+and have shown the most issues inside iTerm2 under UTM — Claude Code can
+hang on theme selection, and the Codex CLI binary has been observed to
+panic on first launch. Terminal.app under UTM handles TUI redraws more
+reliably than iTerm2. Running them in a fresh Terminal.app window also
+means a hang in those tools doesn't block the rest of the auth phase —
+you can close the window and continue.
+
+### Manual auth (if the scripted flow fails)
+
+You can run any of these at any time after install:
+
+```bash
+# CLIs
+gh auth login --web
+gemini                         # follow OAuth prompt
+claude                         # then type /login at the prompt
+codex                          # then type /login at the prompt
+
+# Desktop apps — open and sign in with their respective accounts
+open -a Cursor
+open -a Windsurf
+open -a Claude
+open -a ChatGPT
+open -a Codex
+open -a Gemini
+```
+
+If `claude` or `codex` hangs/crashes in your current terminal, try the
+same command in **Terminal.app** specifically (the stock macOS terminal),
+which is the most reliable host for TUIs inside a UTM VM.
 
 ---
 

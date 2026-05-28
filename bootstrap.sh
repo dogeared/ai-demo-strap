@@ -529,12 +529,19 @@ fi
 # Each entry: "Display Name|prompt note|command to run"
 # Commands that open GUI apps use `open -a` and return immediately; CLIs run
 # in the foreground so the user can complete their flow before continuing.
+# Auth entries are "name|note|cmd".
+# Three command shapes drive the dispatch:
+#   open -a <App>     → GUI app launch + wait
+#   @newtab:<cli>     → open in a fresh Terminal.app window + wait
+#                       (used for TUI CLIs that hang/crash in iTerm2/UTM)
+#   <cli ...>         → run inline in the current terminal
 AUTH_TOOLS=(
-  # CLIs first — quick browser/device flows.
+  # Browser-flow CLIs — short-lived in the terminal, run inline.
   "GitHub CLI|Will open a browser to sign in to github.com.|gh auth login --web"
-  "Claude Code|Launches Claude Code. Type /login to authenticate, then /exit when done.|claude"
   "Gemini CLI|Launches Gemini CLI. Follow the OAuth prompt, then exit when done.|gemini"
-  "OpenAI Codex CLI|Launches Codex CLI. Run /login (or follow the prompt), then exit when done.|codex"
+  # TUI CLIs — open in a fresh Terminal.app window (more reliable in UTM).
+  "Claude Code|A new Terminal window will open. Pick a theme, type /login, complete browser auth, then close that window.|@newtab:claude"
+  "OpenAI Codex CLI|A new Terminal window will open. Run /login (or follow the prompt), then close that window.|@newtab:codex"
   # AI-first editors.
   "Cursor|Opens Cursor. Sign in via Settings → Account, then return here.|open -a Cursor"
   "Windsurf|Opens Windsurf. Sign in via the welcome screen, then return here.|open -a Windsurf"
@@ -550,10 +557,23 @@ for entry in "${AUTH_TOOLS[@]}"; do
   printf "\n%s%s%s\n" "$BOLD$CYAN" "$name" "$RESET"
   printf "  %s%s%s\n" "$DIM" "$note" "$RESET"
 
-  # If the command's first token isn't on PATH and isn't `open`, skip cleanly.
-  first_token="${cmd%% *}"
-  if [[ "$first_token" != "open" ]] && ! command -v "$first_token" >/dev/null 2>&1; then
-    warn "$first_token not found — skipping $name."
+  # Decide dispatch mode and find the underlying command for the PATH check.
+  if [[ "$cmd" == @newtab:* ]]; then
+    mode="newtab"
+    actual_cmd="${cmd#@newtab:}"
+    check_token="${actual_cmd%% *}"
+  elif [[ "${cmd%% *}" == "open" ]]; then
+    mode="app"
+    actual_cmd="$cmd"
+    check_token="open"
+  else
+    mode="cli"
+    actual_cmd="$cmd"
+    check_token="${cmd%% *}"
+  fi
+
+  if [[ "$check_token" != "open" ]] && ! command -v "$check_token" >/dev/null 2>&1; then
+    warn "$check_token not found — skipping $name."
     continue
   fi
 
@@ -562,16 +582,31 @@ for entry in "${AUTH_TOOLS[@]}"; do
     continue
   fi
 
-  if [[ "$first_token" == "open" ]]; then
-    # GUI app: launch and wait for user to confirm they're done.
-    eval "$cmd" || warn "Failed to launch $name."
-    printf "  %sPress Enter once you've finished signing in to %s...%s " \
-      "$DIM" "$name" "$RESET"
-    read -r _ </dev/tty || true
-  else
-    # CLI: run interactively in the foreground.
-    eval "$cmd" </dev/tty || warn "$name exited non-zero."
-  fi
+  case "$mode" in
+    cli)
+      eval "$actual_cmd" </dev/tty || warn "$name exited non-zero."
+      ;;
+    app)
+      eval "$actual_cmd" || warn "Failed to launch $name."
+      printf "  %sPress Enter once you've finished signing in to %s...%s " \
+        "$DIM" "$name" "$RESET"
+      read -r _ </dev/tty || true
+      ;;
+    newtab)
+      # Open in a fresh Terminal.app window. This works around TUI/UTM
+      # issues where Claude Code / Codex CLI hang or panic inside iTerm2.
+      if osascript -e "tell application \"Terminal\" to do script \"$actual_cmd\"" >/dev/null 2>&1; then
+        printf "  %sNew Terminal.app window opened — complete sign-in there, then close it.%s\n" \
+          "$DIM" "$RESET"
+      else
+        warn "Couldn't open a new Terminal.app window. Run this manually:"
+        printf "    %s%s%s\n" "$BOLD" "$actual_cmd" "$RESET"
+      fi
+      printf "  %sPress Enter once you've finished signing in to %s (or to skip)...%s " \
+        "$DIM" "$name" "$RESET"
+      read -r _ </dev/tty || true
+      ;;
+  esac
   ok "$name done."
 done
 
