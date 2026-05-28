@@ -102,9 +102,11 @@ CASKS=(
   # Local-model AI desktops
   ollama-app            # Ollama desktop UI
   lm-studio             # Discover/run local LLMs
-  msty                  # Run LLMs locally
+  mstystudio            # Msty Studio (successor to deprecated Msty)
   jan                   # Offline AI chat
   cherry-studio         # Multi-provider LLM client
+  # AI input / productivity utilities
+  wispr-flow            # Voice-to-text dictation with AI auto-editing
   # Terminals & browser
   warp                  # AI-native terminal
   iterm2                # classic terminal
@@ -453,9 +455,10 @@ for cask in "${CASKS[@]}"; do
     google-gemini)      app_name="Gemini.app" ;;
     ollama-app)         app_name="Ollama.app" ;;
     lm-studio)          app_name="LM Studio.app" ;;
-    msty)               app_name="Msty.app" ;;
+    mstystudio)         app_name="MstyStudio.app" ;;
     jan)                app_name="Jan.app" ;;
     cherry-studio)      app_name="Cherry Studio.app" ;;
+    wispr-flow)         app_name="Wispr Flow.app" ;;
     warp)               app_name="Warp.app" ;;
     iterm2)             app_name="iTerm.app" ;;
     google-chrome)      app_name="Google Chrome.app" ;;
@@ -531,7 +534,8 @@ done
 printf "\n%sGUI apps in /Applications:%s\n" "$BOLD" "$RESET"
 for app in "Cursor.app" "Windsurf.app" "Visual Studio Code.app" "Zed.app" \
            "Claude.app" "ChatGPT.app" "Codex.app" "Gemini.app" \
-           "Ollama.app" "LM Studio.app" "Msty.app" "Jan.app" "Cherry Studio.app" \
+           "Ollama.app" "LM Studio.app" "MstyStudio.app" "Jan.app" "Cherry Studio.app" \
+           "Wispr Flow.app" \
            "Warp.app" "iTerm.app" "Ghostty.app" "Google Chrome.app"; do
   if [[ -d "/Applications/$app" ]]; then
     printf "  %s✓%s %s\n" "$GREEN" "$RESET" "$app"

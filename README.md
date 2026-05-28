@@ -18,7 +18,9 @@ formula come from npm.
 
 **AI desktop assistants** (cask): Claude, ChatGPT, Codex, Google Gemini
 
-**Local-model desktops** (cask): Ollama, LM Studio, Msty, Jan, Cherry Studio
+**Local-model desktops** (cask): Ollama, LM Studio, Msty Studio, Jan, Cherry Studio
+
+**AI utilities** (cask): Wispr Flow (voice-to-text dictation with AI auto-editing)
 
 **Terminals & browser** (cask): Warp, iTerm2, Ghostty, Google Chrome
 
