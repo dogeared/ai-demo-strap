@@ -123,6 +123,7 @@ After install, the script offers to walk you through signing in to:
 | ChatGPT (desktop) | opens app; OpenAI account |
 | Codex (desktop) | opens app; OpenAI account |
 | Google Gemini (desktop) | opens app; Google account |
+| Wispr Flow | opens app; sign in + grant mic/accessibility permissions |
 
 Each is y/n — skip the ones you don't need. For the two "new Terminal window"
 tools, the script waits for you to press Enter after you've finished —
@@ -160,6 +161,7 @@ open -a Claude
 open -a ChatGPT
 open -a Codex
 open -a Gemini
+open -a "Wispr Flow"
 ```
 
 If `claude` or `codex` hangs/crashes in your current terminal, try the

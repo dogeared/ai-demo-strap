@@ -577,6 +577,8 @@ AUTH_TOOLS=(
   "ChatGPT (desktop)|Opens ChatGPT. Sign in with your OpenAI account, then return here.|open -a ChatGPT"
   "Codex (desktop)|Opens Codex. Sign in with your OpenAI account, then return here.|open -a Codex"
   "Google Gemini (desktop)|Opens Gemini. Sign in with your Google account, then return here.|open -a Gemini"
+  # AI utilities.
+  "Wispr Flow|Opens Wispr Flow. Sign in and grant microphone/accessibility permissions, then return here.|open -a 'Wispr Flow'"
 )
 
 for entry in "${AUTH_TOOLS[@]}"; do
