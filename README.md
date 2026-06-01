@@ -22,6 +22,8 @@ formula come from npm.
 
 **AI utilities** (cask): Wispr Flow (voice-to-text dictation with AI auto-editing)
 
+**Demo utilities** (cask): Caffeine (keeps the Mac awake during demos)
+
 **Terminals & browser** (cask): Warp, iTerm2, Ghostty, Google Chrome
 
 **AI CLIs** (formula): `gemini-cli`, `ollama`, `aider`, `llm`

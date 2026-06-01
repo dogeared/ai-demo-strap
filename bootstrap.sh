@@ -107,6 +107,8 @@ CASKS=(
   cherry-studio         # Multi-provider LLM client
   # AI input / productivity utilities
   wispr-flow            # Voice-to-text dictation with AI auto-editing
+  # Demo / event utilities
+  caffeine              # Prevents the Mac from sleeping during demos
   # Terminals & browser
   warp                  # AI-native terminal
   iterm2                # classic terminal
@@ -459,6 +461,7 @@ for cask in "${CASKS[@]}"; do
     jan)                app_name="Jan.app" ;;
     cherry-studio)      app_name="Cherry Studio.app" ;;
     wispr-flow)         app_name="Wispr Flow.app" ;;
+    caffeine)           app_name="Caffeine.app" ;;
     warp)               app_name="Warp.app" ;;
     iterm2)             app_name="iTerm.app" ;;
     google-chrome)      app_name="Google Chrome.app" ;;
@@ -535,7 +538,7 @@ printf "\n%sGUI apps in /Applications:%s\n" "$BOLD" "$RESET"
 for app in "Cursor.app" "Windsurf.app" "Visual Studio Code.app" "Zed.app" \
            "Claude.app" "ChatGPT.app" "Codex.app" "Gemini.app" \
            "Ollama.app" "LM Studio.app" "MstyStudio.app" "Jan.app" "Cherry Studio.app" \
-           "Wispr Flow.app" \
+           "Wispr Flow.app" "Caffeine.app" \
            "Warp.app" "iTerm.app" "Ghostty.app" "Google Chrome.app"; do
   if [[ -d "/Applications/$app" ]]; then
     printf "  %s✓%s %s\n" "$GREEN" "$RESET" "$app"
